@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: dras-jmetal
+Bundle-SymbolicName: dras-jmetal
+Bundle-Version: 1.0.0.qualifier
+Export-Package: org.uma.jmetal.problem.multiobjective,
+ org.uma.jmetal.problem.multiobjective.heuristics,
+ org.uma.jmetal.runner.multiobjective,
+ org.uma.jmetal.runner.multiobjective.utils,
+ tests

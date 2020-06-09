@@ -1,0 +1,6 @@
+4 20 // client-number server-number
+5 0.5 0.5 1 1 // client-server-number PAND PAD CRND CND
+5 0.5 0.5 1 1 // client-server-number PAND PAD CRND CND
+5 0.5 0.5 1 1 // client-server-number PAND PAD CRND CND
+5 0.5 0.5 1 1 // client-server-number PAND PAD CRND CND
+800 20 1 // schedule-duration interval-number kw-dolar
