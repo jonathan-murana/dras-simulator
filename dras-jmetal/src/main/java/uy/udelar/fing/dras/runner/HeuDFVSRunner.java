@@ -3,9 +3,15 @@ package uy.udelar.fing.dras.runner;
 
 import java.util.List;
 
+import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_DEADLINE_BAR_MIPS_WITH_CORES;
 import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_DEADLINE_FIRST_WITH_CORES;
+import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_DEADLINE_HIGHEST_MIPS_WITH_CORES;
 import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_MIPS_FIRST_WITH_CORES;
+import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_PENALTY_BAR_DEADLINE_WITH_CORES;
+import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_PENALTY_BAR_MIPS_WITH_CORES;
 import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_PENALTY_FIRST_WITH_CORES;
+import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_PENALTY_HIGHEST_DEADLINE_WITH_CORES;
+import uy.udelar.fing.dras.heuristics.HEU_HIGHEST_PENALTY_HIGHEST_MIPS_WITH_CORES;
 import uy.udelar.fing.dras.heuristics.HEU_LOWEST_DEADLINE_FIRST_WITH_CORES;
 import uy.udelar.fing.dras.heuristics.HEU_LOWEST_ID_FIRST_WITH_CORES;
 import uy.udelar.fing.dras.heuristics.HEU_LOWEST_MIPS_FIRST_WITH_CORES;
@@ -190,6 +196,24 @@ public class HeuDFVSRunner {
 			    }
 			    if (localHeuristic==7) {
 				    F =  HEU_HIGHEST_MIPS_FIRST_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
+			    }
+			    if (localHeuristic==8) {
+				    F =  HEU_HIGHEST_PENALTY_HIGHEST_MIPS_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
+			    }
+			    if (localHeuristic==9) {
+				    F =  HEU_HIGHEST_PENALTY_HIGHEST_DEADLINE_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
+			    }
+			    if (localHeuristic==10) {
+				    F =  HEU_HIGHEST_DEADLINE_HIGHEST_MIPS_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
+			    }
+			    if (localHeuristic==11) {
+				    F =  HEU_HIGHEST_PENALTY_BAR_MIPS_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
+			    }
+			    if (localHeuristic==12) {
+				    F =  HEU_HIGHEST_PENALTY_BAR_DEADLINE_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
+			    }
+			    if (localHeuristic==13) {
+				    F =  HEU_HIGHEST_DEADLINE_BAR_MIPS_WITH_CORES.schedule(coresPerStep,clientId,problem,variables,s_cpu,s_mem,assigned_task);	    	
 			    }
 			    
 			    

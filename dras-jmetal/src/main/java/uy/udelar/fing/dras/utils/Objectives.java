@@ -11,6 +11,9 @@ public class Objectives {
 	 public Double dcCost = null;
 	 public Double violatedTime = null;
 	 public Double [] sol;
+	 public Double paidToTenants= null;
+	 public Double onsiteGenerationCost= null;
+	 public Double coolingCost= null;
 
 
 }

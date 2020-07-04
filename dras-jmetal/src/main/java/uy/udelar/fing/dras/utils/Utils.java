@@ -189,7 +189,7 @@ public class Utils {
 	}
 
 	
-	public static int[] sort_by_max(int[] w)  {		
+	public static int[] sort_by_max(int[] w )  {		
 		
 		int[] ints = IntStream.range(0, w.length).toArray();
 		List<Integer> list = Arrays.stream(ints).boxed().collect(Collectors.toList());
@@ -197,6 +197,30 @@ public class Utils {
 		
 		List<Integer> sorted = list.stream().sorted( (b,a)-> {  return Integer.valueOf(w[a])
 			.compareTo(Integer.valueOf(w[b])); }).collect(Collectors.toList());				
+		
+		return sorted.stream().mapToInt(i->i).toArray();
+	
+	}
+	
+	public static int[] sort_by_max(int[] w ,int[] y )  {		
+		
+		int[] ints = IntStream.range(0, w.length).toArray();
+		List<Integer> list = Arrays.stream(ints).boxed().collect(Collectors.toList());
+		
+		
+		List<Integer> sorted = list.stream().sorted( (b,a)-> {  
+			int comp=
+			Integer.valueOf(w[a])
+			.compareTo(Integer.valueOf(w[b])
+					);
+			if (comp== 0) {
+				return Integer.valueOf(y[a])
+						.compareTo(Integer.valueOf(y[b]));
+			}else {
+				return comp;
+			}
+			}
+		).collect(Collectors.toList());				
 		
 		return sorted.stream().mapToInt(i->i).toArray();
 	

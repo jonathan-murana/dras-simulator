@@ -84,7 +84,7 @@ public class DatacenterControllerDiscrete {
 
 		
 		int local_heuristic_id = 1;
-		if ("highest-penalty-first".equals(ro_local_heuristic)){
+		if ("HPF".equals(ro_local_heuristic)){
 			local_heuristic_id = 1;			
 		} 
 		if ("lowest-id-first".equals(ro_local_heuristic)){
@@ -106,6 +106,30 @@ public class DatacenterControllerDiscrete {
 			local_heuristic_id = 7;			
 		} 
 		
+		//priority-length 
+		//priority-deadline
+		//deadline-length? 
+		
+		if ("highest-priority-highest-mips".equals(ro_local_heuristic)){
+			local_heuristic_id = 8;			
+		} 
+		if ("highest-priority-highest-deadline".equals(ro_local_heuristic)){
+			local_heuristic_id = 9;			
+		} 
+		if ("highest-deadline-highest-mips".equals(ro_local_heuristic)){
+			local_heuristic_id = 10;			
+		}
+
+		if ("PL".equals(ro_local_heuristic)){
+			local_heuristic_id = 11;			
+		} 
+		if ("PD".equals(ro_local_heuristic)){
+			local_heuristic_id = 12;			
+		} 
+		if ("DL".equals(ro_local_heuristic)){
+			local_heuristic_id = 13;			
+		} 
+		
 		//obtiene als funciones de los clientes
 		ObjectivesVector [] client_functions = new ObjectivesVector[ro_clients_number];;
 		for (int c = 0;c<ro_clients_number;c++) {
@@ -115,14 +139,14 @@ public class DatacenterControllerDiscrete {
 		//calcula e imprime pareto
 		Objectives [] pareto = calcularParetoGlobal(client_functions,ro_discrete_points_number,ro_step_size);		
 		//calcular e imprime heuristicas
-		calcularBau(pareto);
+		// calcularBau(pareto);
 
-		calcularIdeal(pareto);
-		calcularBTOg(pareto);
-		calcularNash(pareto, client_functions);
-		calcularBTOd(pareto, client_functions);
-		calcularParetoDistribuido(pareto,client_functions);
-		calcularPMP(pareto, client_functions);
+		//calcularIdeal(pareto);
+		// calcularBTOg(pareto);
+		//calcularNash(pareto, client_functions);
+		//calcularBTOd(pareto, client_functions);
+		//calcularParetoDistribuido(pareto,client_functions);
+		//calcularPMP(pareto, client_functions);
 
 
 	}
@@ -163,9 +187,15 @@ public class DatacenterControllerDiscrete {
 	    item.socialCost = socialCost;
 	    item.nonCompleteTasks = Utils.sumarized(nct);
 	    item.violatedTime = Utils.sumarized(vtt);
+	    
+	    item.paidToTenants = (Utils.sumarized(s) * paux);
+	    item.onsiteGenerationCost = (ro_D - Utils.sumarized(s)) * ro_gasoil;
+	    item.coolingCost = item.paidToTenants*2; // TODO:
+	    
 	    pareto[iteration]= item;		
 	    bw.write(iteration + " " + paux + " " + item.alpha + " " + "0" +" " + "0" + " " 
 	    + dcCost + " " + socialCost + " " + item.nonCompleteTasks  +" " + item.violatedTime
+	    +" " + item.paidToTenants+" " + item.onsiteGenerationCost+" " + item.coolingCost
 	     
 	    		);
         bw.newLine();
