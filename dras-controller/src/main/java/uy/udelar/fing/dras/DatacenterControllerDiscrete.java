@@ -3,7 +3,6 @@ package uy.udelar.fing.dras;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -16,11 +15,10 @@ import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.math3.util.CombinatoricsUtils;
-import org.netlib.lapack.Sisnan;
 import org.paukov.combinatorics3.Generator;
 
-import de.erichseifert.vectorgraphics2d.pdf.Payload;
+
+import uy.udelar.fing.dras.problem.Constants;
 import uy.udelar.fing.dras.runner.HeuDFVSRunner;
 import uy.udelar.fing.dras.utils.Objectives;
 import uy.udelar.fing.dras.utils.ObjectivesVector;
@@ -32,12 +30,15 @@ public class DatacenterControllerDiscrete {
 
 	public static String ro_instance_folder = "instances/random";
 	public static Integer ro_clients_number;
+	public static Integer ro_servers_number;
 	public static Integer ro_D;
 	public static double ro_gasoil;
 	public static double ro_p ;
 	public static String ro_local_heuristic;
 	public static Integer ro_discrete_points_number;
 	public static double ro_step_size;
+	public static Integer ro_area;
+	public static Integer ro_COP;
 
 
 
@@ -45,8 +46,6 @@ public class DatacenterControllerDiscrete {
 		if (args.length != 7 ) {
 			System.out.println("Need parameter: instance D motor p local_heuristic global_heuristic discrete_points_number step_size !!!!!!!!!!!!!!!!!!!");
 			System.exit(1);
-
-		
 		}	
 		else {
 			ro_instance_folder = args[0];
@@ -73,6 +72,10 @@ public class DatacenterControllerDiscrete {
 		reader = new BufferedReader(new FileReader(ro_instance_folder + "/" + instance_name));
 		String line = reader.readLine();
 		ro_clients_number = Integer.valueOf(line.split(" ")[0]);
+		ro_servers_number = Integer.valueOf(line.split(" ")[1]);
+		ro_area = Integer.valueOf(line.split(" ")[2]);
+		ro_COP = Integer.valueOf(line.split(" ")[3]);
+		
 		reader.close();
 		
 
@@ -81,6 +84,9 @@ public class DatacenterControllerDiscrete {
 		System.out.println("motor=" + ro_gasoil );
 		System.out.println("p=" + ro_p );
 		System.out.println("local_heuristic=" + ro_local_heuristic );
+		System.out.println("servers=" + ro_servers_number );
+		System.out.println("ro_area (R)=" + ro_area );
+		System.out.println("COP=" + ro_COP);
 
 		
 		int local_heuristic_id = 1;
@@ -143,7 +149,7 @@ public class DatacenterControllerDiscrete {
 
 		//calcularIdeal(pareto);
 		// calcularBTOg(pareto);
-		//calcularNash(pareto, client_functions);
+		calcularNash(pareto, client_functions);
 		//calcularBTOd(pareto, client_functions);
 		//calcularParetoDistribuido(pareto,client_functions);
 		//calcularPMP(pareto, client_functions);
@@ -189,26 +195,45 @@ public class DatacenterControllerDiscrete {
 	    item.violatedTime = Utils.sumarized(vtt);
 	    
 	    item.paidToTenants = (Utils.sumarized(s) * paux);
-	    item.onsiteGenerationCost = (ro_D - Utils.sumarized(s)) * ro_gasoil;
-	    item.coolingCost = item.paidToTenants*2; // TODO:
+	    
+	    // at 70%
+		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
+	    
+	    item.coolingPowerConsumption = HVAC.coolingPowerConsumption(cruising_power_watts,
+	    		cruising_power_watts
+	    		- item.alpha,
+	    		ro_area,
+	    		ro_COP
+	    		); 
+	    
+	    if (item.coolingPowerConsumption<0) {
+	    	item.coolingPowerConsumption = 0.0;
+	    }
+	    
+	    double delta_h = HVAC.coolingPowerConsumption(cruising_power_watts,
+	    		cruising_power_watts,ro_area,ro_COP)-
+	    HVAC.coolingPowerConsumption(cruising_power_watts,
+	    		cruising_power_watts
+	    		- item.alpha,
+	    		ro_area,
+	    		ro_COP); 
+	    
+	    item.coolingCost = item.coolingPowerConsumption * ro_gasoil / 10;
+	    		
+	    item.onsiteGenerationCost = (ro_D -  Utils.sumarized(s) - delta_h) * ro_gasoil;
+	    if (item.onsiteGenerationCost<0) {
+	    	item.onsiteGenerationCost = 0.0;
+	    }
+	    
 	    
 	    pareto[iteration]= item;		
 	    bw.write(iteration + " " + paux + " " + item.alpha + " " + "0" +" " + "0" + " " 
 	    + dcCost + " " + socialCost + " " + item.nonCompleteTasks  +" " + item.violatedTime
-	    +" " + item.paidToTenants+" " + item.onsiteGenerationCost+" " + item.coolingCost
-	     
+	    +" " + item.paidToTenants+" " + item.onsiteGenerationCost+" " + item.coolingCost +" " +item.coolingPowerConsumption
 	    		);
-        bw.newLine();
+
+	    bw.newLine();
         paux=paux+step;
-        
-//        Double sum = 0.0;
-//        System.out.println("p=" +  p);
-//        for (int c2 = 0; c2<clients_number;c2++) {
-//        	System.out.print("," +  s[c2]);
-//        	sum += s[c2];
-//        }
-//        System.out.println("------- " + sum);
-        
         iteration++;
 		}
 		 bw.close();
@@ -267,9 +292,9 @@ public class DatacenterControllerDiscrete {
 	
 	public static void calcularNash(Objectives[] pareto,ObjectivesVector [] client_functions ) throws IOException  {
 		String global_heuristic = "nash";
-		Objectives nash = calcularNashEquilibriumAux(client_functions);
+		List<Objectives> nash = calcularNashEquilibriumAux(client_functions);
 		String filename = "output/heu_" + ro_local_heuristic +"_" + global_heuristic + "-"+ ro_instance_folder.split("/")[1];
-		printUpperLevelHeuristics(nash, filename);
+		printPareto(nash, filename);
 	}
 	
 	public static void calcularBTOd(Objectives[] pareto,ObjectivesVector [] client_functions ) throws IOException  {
@@ -467,58 +492,191 @@ public class DatacenterControllerDiscrete {
 			return paretoDist;
 	}
 	
-
 	
-	public static Objectives calcularNashEquilibriumAux(ObjectivesVector[] client_functions){
+	
+	public static double getDeltaH(double[] deltaP) {
+		// at 70%
+		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
+		 	
+		double coolingPowerConsumption = HVAC.coolingPowerConsumption(cruising_power_watts,
+		    		cruising_power_watts
+		    		- Utils.sumarized(deltaP),
+		    		ro_area,
+		    		ro_COP
+		    		); 
+		    
+		    if (coolingPowerConsumption<0) {
+		    	coolingPowerConsumption = 0.0;
+		    }
+		   
+		double delta_h = HVAC.coolingPowerConsumption(cruising_power_watts,
+		    		cruising_power_watts,ro_area,ro_COP)-
+		    HVAC.coolingPowerConsumption(cruising_power_watts,
+		    		cruising_power_watts-Utils.sumarized(deltaP)
+		    		,
+		    		ro_area,
+		    		ro_COP); 
+		return delta_h;
+	}
+	
+	public static double getH(double[] deltaP) {
+		// at 70%
+		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
+		 	
+		double coolingPowerConsumption = HVAC.coolingPowerConsumption(cruising_power_watts,
+		    		cruising_power_watts
+		    		- Utils.sumarized(deltaP),
+		    		ro_area,
+		    		ro_COP
+		    		); 
+		    
+		    if (coolingPowerConsumption<0) {
+		    	coolingPowerConsumption = 0.0;
+		    }
+		   
+		double delta_h = HVAC.coolingPowerConsumption(cruising_power_watts,
+		    		cruising_power_watts,ro_area,ro_COP)-
+		    HVAC.coolingPowerConsumption(cruising_power_watts,
+		    		cruising_power_watts-Utils.sumarized(deltaP)
+		    		,
+		    		ro_area,
+		    		ro_COP); 
+		return cruising_power_watts - delta_h;
+	}
+	
+	
+	public static List<Objectives> calcularNashEquilibriumAux(ObjectivesVector[] client_functions){
+		
+		List<Objectives> resulList = new ArrayList<Objectives>();
+		
 		
 		double[] b = new double[ro_clients_number];
 		double[] c = new double[ro_clients_number];
-		double y=0;
-		double[] s = new double[ro_clients_number];
+		//double y=0;
+		double[] deltaP = new double[ro_clients_number];
 		
-		double[] nct = new double[ro_clients_number];
-		double[] vtt = new double[ro_clients_number];
+//		double[] nct = new double[ro_clients_number];
+//		double[] vtt = new double[ro_clients_number];
+		double ρ = ro_D;
 		
-		double err=1;
-		int iteration = 0;
-		Objectives result = new Objectives();
-		double paux= ro_p + 0.01;
-
-		while (err>=0.0050 && iteration < 1000) {
-				iteration++;
-				for (int i = 0; i < ro_clients_number; i++) {
-					Objectives obj = poderar(client_functions[i],paux);
-					s[i] = obj.alpha;
-					c[i] = obj.loss;
-					nct[i] = obj.nonCompleteTasks;
-					vtt[i] = obj.violatedTime;
-					b[i]= (ro_D-s[i])*paux;
+		int cardC = ro_clients_number;
+		int k = 0;
+		double RI= ro_p + 0.01;
+		double GP= 0;
+		double ϵ = 0.0050;
+		double δ=Math.abs((ρ-GP)/ρ);
+		double α = ro_gasoil;
+		while (δ>=ϵ && k < 1000) {
+				k++;
+				for (int j = 0; j < cardC; j++) {
+					
+					Objectives obj = poderar(client_functions[j],RI);
+					deltaP[j] = obj.alpha;
+				    //bj←(ρ−∆P(Φj(RIj)−∆H(Φj(RIj))×RIk
+					b[j]= (ρ-deltaP[j])*RI;
+					c[j] = obj.loss;
+					//nct[j] = obj.nonCompleteTasks;
+					//vtt[j] = obj.violatedTime;
+					
+					
 				}
-			double dcCost  = (Utils.sumarized(s) * paux) + ((ro_D - Utils.sumarized(s)) * ro_gasoil);
-			double socialCost = (Utils.sumarized(c)) + ((ro_D - Utils.sumarized(s)) * ro_gasoil);
-			y = Math.sqrt(Utils.sumarized(b)*ro_clients_number*ro_D/ro_gasoil) - (ro_clients_number-1)*ro_D;
-		    if (y <0) {
-		    	y=0;
-		    }
-		    err = Math.abs((y+Utils.sumarized(s)-ro_D)/ro_D);
-		    result.alpha = Utils.sumarized(s);
+		    double deltaH = 0;
+			
+			
+		    
+			
+			
+//			
+//			 if (gasoilCost <0) {
+//				 gasoilCost=0;
+//			    }
+			
+			//double H = getH(deltaP);
+			//double H = 0 ;
+			//double socialCost = (Utils.sumarized(c)) + gasoilCost + H * α / 10 ;
+			
+
+			//System.out.println(socialCost);
+		    
+		    deltaH = getDeltaH(deltaP);
+			RI = Utils.sumarized(b)/(( cardC-1 ) * (ρ - deltaH)  + GP);
+			
+		   
+		    //result.alpha = Utils.sumarized(deltaP);
 		    //System.out.println("result.alpha="+result.alpha);
-		    result.payment = paux;
-		    result.socialCost = socialCost;
+
+//		    result.nonCompleteTasks = Utils.sumarized(nct);
+//		    result.violatedTime = Utils.sumarized(vtt);
+//		    result.coolingCost = coolingCost;
+//		    result.coolingPowerConsumption = coolingPowerConsumption;
+		    
+		    //∆P(Φj(RIj)) + ∆H(Φj(RIj)) =ρ−bj/p
+		    
+		    
+		  //GP  =(( ρ - Utils.sumarized(deltaP) - deltaH ) * ro_gasoil);
+			GP = Math.sqrt(    Utils.sumarized(b)   *   cardC  *  (ρ - deltaH )  /  α  ) - (cardC-1)*( ρ );
+			if (GP <0) {
+				GP=0;
+			}
+		    
+			//double coolingCost = coolingPowerConsumption * ro_gasoil / 10;
+			//double gasoilCost =GP * α;
+			double H = getH(deltaP);
+			double dcCost  = (Utils.sumarized(deltaP) * RI) + GP * α + H * α / 10;
+		    
+			
+			Objectives result = new Objectives();
+			result.payment = RI;
+//		    result.socialCost = socialCost;
 		    result.dcCost = dcCost;
-		    result.nonCompleteTasks = Utils.sumarized(nct);
-		    result.violatedTime = Utils.sumarized(vtt);
 		    
-		    
-		    paux = Utils.sumarized(b)/((ro_clients_number-1)*ro_D+y);
+		    //deltaH = 0;
+			δ = Math.abs( ( ρ -  deltaH - GP -   Utils.sumarized(deltaP)) / (ρ -  deltaH)) ;
+			System.out.println(dcCost + " " + δ);
+//			System.out.println(deltaH);
+//			System.out.println("GP" + GP);
+//			System.out.println(Utils.sumarized(deltaP));
+//			System.out.println(δ);
+		
+			// SOL
+			double [] sol1=DoubleStream.iterate(result.payment, n -> n).limit(ro_clients_number).toArray();
+			result.sol = ArrayUtils.toObject(sol1);	
+			resulList.add(result);
 		}
 		
-		// SOL
-		double [] sol1=DoubleStream.iterate(result.payment, n -> n).limit(ro_clients_number).toArray();
-		result.sol = ArrayUtils.toObject(sol1);	
 		
-		return result;
+		
+		return resulList;
 	}
+	
+
+	public static void printPareto(List<Objectives> results, String filename) throws IOException  {
+		File fout = new File(filename+".FUN");
+		FileOutputStream fos = new FileOutputStream(fout);
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+		
+		results.stream().forEach(
+				result -> {
+					try {
+						bw.write(0 + " " + result.payment + " " + result.alpha + " " 
+								+ 0+" " + 0 + " " + result.dcCost + " " + result.socialCost
+								+ " " + result.nonCompleteTasks+ " " + result.violatedTime
+								+" " + result.paidToTenants+" " + result.onsiteGenerationCost+" " + result.coolingCost +" " +result.coolingPowerConsumption
+										)
+								
+								;
+						bw.newLine();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				);
+	    
+	    bw.close();
+		//printUpperLevelHeuristicsSolution(result, filename);
+	}
+
 	
 	
 	public static void printUpperLevelHeuristics(Objectives result, String filename) throws IOException  {
@@ -528,16 +686,17 @@ public class DatacenterControllerDiscrete {
 		bw.write(0 + " " + result.payment + " " + result.alpha + " " 
 		+ 0+" " + 0 + " " + result.dcCost + " " + result.socialCost
 		+ " " + result.nonCompleteTasks+ " " + result.violatedTime
+		+" " + result.paidToTenants+" " + result.onsiteGenerationCost+" " + result.coolingCost +" " +result.coolingPowerConsumption
 				)
 		
 		;
 	    bw.newLine();
 	    bw.close();
-	    
 		printUpperLevelHeuristicsSolution(result, filename);
-
-
 	}
+	
+	
+	
 	public static void printUpperLevelHeuristicsSolution(Objectives result, String filename) throws IOException  {
 		
 		

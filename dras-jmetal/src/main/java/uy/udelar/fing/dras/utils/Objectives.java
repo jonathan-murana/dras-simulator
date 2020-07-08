@@ -14,6 +14,6 @@ public class Objectives {
 	 public Double paidToTenants= null;
 	 public Double onsiteGenerationCost= null;
 	 public Double coolingCost= null;
-
+	 public Double coolingPowerConsumption= null;
 
 }
