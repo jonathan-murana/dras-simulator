@@ -160,7 +160,7 @@ public class DatacenterControllerDiscrete {
 	public static Objectives [] calcularParetoGlobal(ObjectivesVector[] client_functions, int iterations, double step) throws IOException{
 		double[] b = new double[ro_clients_number];
 		double[] c = new double[ro_clients_number];
-		double[] s = new double[ro_clients_number];
+		double[] deltaP = new double[ro_clients_number];
 		double[] nct = new double[ro_clients_number];
 		double[] vtt = new double[ro_clients_number];
 
@@ -176,25 +176,25 @@ public class DatacenterControllerDiscrete {
 			//double cost = 0.0;
 			for (int i = 0; i < ro_clients_number; i++) {
 				Objectives obj = poderar(client_functions[i],paux);
-				s[i] = obj.alpha;
+				deltaP[i] = obj.alpha;
 				c[i] = obj.loss;
 				nct[i] = obj.nonCompleteTasks;
 				vtt[i] = obj.violatedTime;				
-				b[i]= (ro_D-s[i])*paux;
+				b[i]= (ro_D-deltaP[i])*paux;
 			}
 			
-		double dcCost  = (Utils.sumarized(s) * paux);// + ((D - Utils.sumarized(s)) * alpha);
+		double dcCost  = (Utils.sumarized(deltaP) * paux);// + ((D - Utils.sumarized(s)) * alpha);
 		double socialCost = (Utils.sumarized(c));// + ((D - Utils.sumarized(s)) * alpha);
 	    
 		Objectives item = new Objectives();
-	    item.alpha = Utils.sumarized(s);
+	    item.alpha = Utils.sumarized(deltaP);
 	    item.payment = paux;
 	    item.dcCost = dcCost;
 	    item.socialCost = socialCost;
 	    item.nonCompleteTasks = Utils.sumarized(nct);
 	    item.violatedTime = Utils.sumarized(vtt);
 	    
-	    item.paidToTenants = (Utils.sumarized(s) * paux);
+	    item.paidToTenants = (Utils.sumarized(deltaP) * paux);
 	    
 	    // at 70%
 		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
@@ -210,17 +210,11 @@ public class DatacenterControllerDiscrete {
 	    	item.coolingPowerConsumption = 0.0;
 	    }
 	    
-	    double delta_h = HVAC.coolingPowerConsumption(cruising_power_watts,
-	    		cruising_power_watts,ro_area,ro_COP)-
-	    HVAC.coolingPowerConsumption(cruising_power_watts,
-	    		cruising_power_watts
-	    		- item.alpha,
-	    		ro_area,
-	    		ro_COP); 
+	    double delta_h = getDeltaH(deltaP);
 	    
 	    item.coolingCost = item.coolingPowerConsumption * ro_gasoil / 10;
 	    		
-	    item.onsiteGenerationCost = (ro_D -  Utils.sumarized(s) - delta_h) * ro_gasoil;
+	    item.onsiteGenerationCost = (ro_D -  Utils.sumarized(deltaP) - delta_h) * ro_gasoil;
 	    if (item.onsiteGenerationCost<0) {
 	    	item.onsiteGenerationCost = 0.0;
 	    }
@@ -491,13 +485,13 @@ public class DatacenterControllerDiscrete {
 		
 			return paretoDist;
 	}
-	
-	
+
 	
 	public static double getDeltaH(double[] deltaP) {
 		// at 70%
 		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
-		 	
+		//System.out.println(cruising_power_watts);
+
 		double coolingPowerConsumption = HVAC.coolingPowerConsumption(cruising_power_watts,
 		    		cruising_power_watts
 		    		- Utils.sumarized(deltaP),
@@ -523,6 +517,7 @@ public class DatacenterControllerDiscrete {
 		// at 70%
 		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
 		 	
+		
 		double coolingPowerConsumption = HVAC.coolingPowerConsumption(cruising_power_watts,
 		    		cruising_power_watts
 		    		- Utils.sumarized(deltaP),
@@ -558,14 +553,16 @@ public class DatacenterControllerDiscrete {
 //		double[] nct = new double[ro_clients_number];
 //		double[] vtt = new double[ro_clients_number];
 		double ρ = ro_D;
-		
 		int cardC = ro_clients_number;
 		int k = 0;
-		double RI= ro_p + 0.01;
+		double RI= ro_p + 0.02;
 		double GP= 0;
 		double ϵ = 0.0050;
 		double δ=Math.abs((ρ-GP)/ρ);
 		double α = ro_gasoil;
+		double φ = α / 10;
+			
+		double deltaH = 0;
 		while (δ>=ϵ && k < 1000) {
 				k++;
 				for (int j = 0; j < cardC; j++) {
@@ -573,14 +570,14 @@ public class DatacenterControllerDiscrete {
 					Objectives obj = poderar(client_functions[j],RI);
 					deltaP[j] = obj.alpha;
 				    //bj←(ρ−∆P(Φj(RIj)−∆H(Φj(RIj))×RIk
-					b[j]= (ρ-deltaP[j])*RI;
+					b[j]= (ρ - deltaH -deltaP[j])*RI;
 					c[j] = obj.loss;
 					//nct[j] = obj.nonCompleteTasks;
 					//vtt[j] = obj.violatedTime;
 					
 					
 				}
-		    double deltaH = 0;
+		   
 			
 			
 		    
@@ -598,9 +595,12 @@ public class DatacenterControllerDiscrete {
 
 			//System.out.println(socialCost);
 		    
-		    deltaH = getDeltaH(deltaP);
+		    
+		
+		    //deltaH = 0;
+
 			RI = Utils.sumarized(b)/(( cardC-1 ) * (ρ - deltaH)  + GP);
-			
+			deltaH = getDeltaH(deltaP);
 		   
 		    //result.alpha = Utils.sumarized(deltaP);
 		    //System.out.println("result.alpha="+result.alpha);
@@ -614,15 +614,23 @@ public class DatacenterControllerDiscrete {
 		    
 		    
 		  //GP  =(( ρ - Utils.sumarized(deltaP) - deltaH ) * ro_gasoil);
-			GP = Math.sqrt(    Utils.sumarized(b)   *   cardC  *  (ρ - deltaH )  /  α  ) - (cardC-1)*( ρ );
+			deltaH = getDeltaH(deltaP);
+			//System.out.println("deltaH=" + deltaH);
+			//System.out.println("deltaP=" +  Utils.sumarized(deltaP));
+			//System.out.println("GP=" + GP);
+			//System.out.println("cardC=" + cardC);
+			//deltaH = 0;
+			GP = Math.sqrt(    Utils.sumarized(b)   *   cardC  *  (ρ - deltaH )  /  α  ) - (cardC-1)*( ρ - deltaH);
+			
 			if (GP <0) {
 				GP=0;
 			}
+			
 		    
 			//double coolingCost = coolingPowerConsumption * ro_gasoil / 10;
 			//double gasoilCost =GP * α;
-			double H = getH(deltaP);
-			double dcCost  = (Utils.sumarized(deltaP) * RI) + GP * α + H * α / 10;
+			//double H = getH(deltaP);
+			double dcCost  = (Utils.sumarized(deltaP) * RI) - deltaH * φ + GP * α ;
 		    
 			
 			Objectives result = new Objectives();
@@ -631,12 +639,14 @@ public class DatacenterControllerDiscrete {
 		    result.dcCost = dcCost;
 		    
 		    //deltaH = 0;
+		    //deltaH = 0;
 			δ = Math.abs( ( ρ -  deltaH - GP -   Utils.sumarized(deltaP)) / (ρ -  deltaH)) ;
-			System.out.println(dcCost + " " + δ);
-//			System.out.println(deltaH);
-//			System.out.println("GP" + GP);
-//			System.out.println(Utils.sumarized(deltaP));
-//			System.out.println(δ);
+			System.out.println(RI+ " " + dcCost + " " + δ);
+			//System.out.println(deltaH + GP + Utils.sumarized(deltaP) );
+			//System.out.println("deltaH=" +deltaH);
+			//System.out.println("GP=" + GP);
+			//System.out.println("deltaP=" + Utils.sumarized(deltaP));
+			//System.out.println("δ="+δ);
 		
 			// SOL
 			double [] sol1=DoubleStream.iterate(result.payment, n -> n).limit(ro_clients_number).toArray();
