@@ -24,7 +24,7 @@ import uy.udelar.fing.dras.utils.Objectives;
 import uy.udelar.fing.dras.utils.ObjectivesVector;
 import uy.udelar.fing.dras.utils.Utils;
 
-public class DatacenterControllerDiscrete {
+public class DatacenterControllerDiscrete2 {
 
 	private final static String instance_name = "ins";
 
@@ -183,10 +183,12 @@ public class DatacenterControllerDiscrete {
 				b[i]= (ro_D-deltaP[i])*paux;
 			}
 			
+		double socialCost = (Utils.sumarized(c));// + ((D - Utils.sumarized(s)) * alpha);
 	    
 		Objectives item = new Objectives();
 	    item.alpha = Utils.sumarized(deltaP);
 	    item.payment = paux;
+	    item.socialCost = socialCost;
 	    item.nonCompleteTasks = Utils.sumarized(nct);
 	    item.violatedTime = Utils.sumarized(vtt);
 	    item.paidToTenants = (Utils.sumarized(deltaP) * paux);
@@ -220,9 +222,8 @@ public class DatacenterControllerDiscrete {
 	    
 		double dcCost  = (Utils.sumarized(deltaP) * paux) + item.onsiteGenerationCost - item.coolingCost;
 	    item.dcCost = dcCost;
-		double socialCost = (Utils.sumarized(c)) + item.onsiteGenerationCost;
-	    item.socialCost = socialCost;
 
+	    
 	    pareto[iteration]= item;		
 	    bw.write(iteration + " " + paux + " " + item.alpha + " " + item.onsiteGeneration +" " + "0" + " " 
 	    + dcCost + " " + socialCost + " " + item.nonCompleteTasks  +" " + item.violatedTime
@@ -558,7 +559,7 @@ public class DatacenterControllerDiscrete {
 		double ρ = ro_D;
 		int cardC = ro_clients_number;
 		int k = 0;
-		double RI= ro_p + 0.01;
+		double RI= ro_p + 0.1;
 		double GP= 0;
 		double ϵ = 0.0050;
 		double δ=Math.abs((ρ-GP)/ρ);
@@ -577,18 +578,18 @@ public class DatacenterControllerDiscrete {
 //				}
 //				deltaH = getDeltaH(deltaP);
 				
-
 				for (int j = 0; j < cardC; j++) {					
 					Objectives obj = poderar(client_functions[j],RI);
 					deltaP[j] = obj.alpha;
-				    b[j]= (ρ - (deltaH) - deltaP[j])*RI;
+				    b[j]= (ρ - deltaH -deltaP[j])*RI;
 					c[j] = obj.loss;
 				}
-				
-				deltaH = getDeltaH(deltaP);
+		   
+
 				//double coolingCost = coolingPowerConsumption * ro_gasoil / 10;
 				//double gasoilCost =GP * α;
 				//double H = getH(deltaP);
+				deltaH = getDeltaH(deltaP);
 				double realGP = ro_D - Utils.sumarized(deltaP) - deltaH;
 				if (realGP<0) {
 					realGP = 0;
@@ -606,6 +607,7 @@ public class DatacenterControllerDiscrete {
 				
 				Objectives result = new Objectives();
 				result.payment = RI;
+//			    result.socialCost = socialCost;
 			    result.dcCost = dcCost;
 			    result.onsiteGeneration = GP;
 			
@@ -619,9 +621,8 @@ public class DatacenterControllerDiscrete {
 			
 			//double H = getH(deltaP);
 			//double H = 0 ;
-			double socialCost = (Utils.sumarized(c)) + realGP * α ;
-   	        result.socialCost = socialCost;
-
+			//double socialCost = (Utils.sumarized(c)) + gasoilCost + H * α / 10 ;
+			
 
 			//System.out.println(socialCost);
 		   
@@ -646,29 +647,22 @@ public class DatacenterControllerDiscrete {
 			//System.out.println("GP=" + GP);
 			//System.out.println("cardC=" + cardC);
 			//deltaH = 0;
+			GP = Math.sqrt(    Utils.sumarized(b)   *   cardC  *  (ρ - deltaH )  /  α  ) - (cardC-1)*( ρ - deltaH);
 			
-   	        deltaH = getDeltaH(deltaP);
-   	        double resta = ρ - deltaH;
-   	        if (resta <0) {
-   	        	resta=0;
+			if (GP <0) {
+				GP=0;
 			}
-   	        
-   	        GP = Math.sqrt(    Utils.sumarized(b)   *   cardC  *  (resta )  /  α  ) - (cardC-1)*( resta);
-//			if (GP <0) {
-//				GP=0;
-//			}
+			
+
+		    
+		   
 
 			δ = Math.abs( ( ρ -  deltaH - GP -   Utils.sumarized(deltaP)) / (ρ -  deltaH)) ;
-			deltaH = 0;
-			//System.out.println(RI+ " " + dcCost + " " + realGP + " " + coolCost  + " " + Utils.sumarized(deltaP) * RI);
+			System.out.println(RI+ " " + dcCost + " " + realGP + " " + coolCost  + " " + Utils.sumarized(deltaP) * RI);
 			
 			
-			
+			 
 			RI = Utils.sumarized(b)/(( cardC-1 ) * (ρ - deltaH)  + GP);
-			
-			//deltaH = getDeltaH(deltaP);
-			
-			//RI = Math.sqrt(  Utils.sumarized(b) * α / cardC / (ρ - deltaH));
 			
 			//System.out.println(deltaH + GP + Utils.sumarized(deltaP) );
 			//System.out.println("deltaH=" +deltaH);

@@ -10,22 +10,19 @@ public class HVAC {
 			double COP //	 		
 			) {
 		
-		// 
 		
-		// powered off
-		if (P < cruising_P * 0.7) {
+		if (P < cruising_P * 0.5) {
 			return 0.0;
 		}
-				
-//		// critic TODO: set real cooling consumption 
-//		if (watts > cruising_power_watts * 1.2) {
-//			return cruising_power_watts*1.2;
-//		}
 		
-		// normal TODO: set real cooling consumption 
+		if (cruising_P * 0.5 < P &&  P < cruising_P * 0.7) {
+			return (P+R * 20) / COP / 2;
+		}
+		
+		
 		double H =(P+R * 20) / COP;
-				
-				
+		
+		
 		return H;
 		
 	}
