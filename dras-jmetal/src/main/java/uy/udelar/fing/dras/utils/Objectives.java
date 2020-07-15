@@ -16,5 +16,6 @@ public class Objectives {
 	 public Double onsiteGenerationCost= 0.0;
 	 public Double coolingCost= 0.0;
 	 public Double coolingPowerConsumption= 0.0;
+	 public Double penalty = 0.0;
 
 }

@@ -163,6 +163,8 @@ public class DatacenterControllerDiscrete {
 		double[] deltaP = new double[ro_clients_number];
 		double[] nct = new double[ro_clients_number];
 		double[] vtt = new double[ro_clients_number];
+		double[] penalty = new double[ro_clients_number];
+
 
 		
 		File fout = new File("output/pareto-global_" + ro_local_heuristic +"_" + ro_instance_folder.split("/")[1]+".FUN");
@@ -170,7 +172,7 @@ public class DatacenterControllerDiscrete {
 		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 		int iteration = 0;
 		Objectives [] pareto = new Objectives[iterations];;
-		double paux= ro_p;
+		double paux= 0;
 		
 		while (iteration < iterations) {
 			//double cost = 0.0;
@@ -179,7 +181,8 @@ public class DatacenterControllerDiscrete {
 				deltaP[i] = obj.alpha;
 				c[i] = obj.loss;
 				nct[i] = obj.nonCompleteTasks;
-				vtt[i] = obj.violatedTime;				
+				vtt[i] = obj.violatedTime;
+				penalty[i] = obj.penalty;
 				b[i]= (ro_D-deltaP[i])*paux;
 			}
 			
@@ -190,6 +193,12 @@ public class DatacenterControllerDiscrete {
 	    item.nonCompleteTasks = Utils.sumarized(nct);
 	    item.violatedTime = Utils.sumarized(vtt);
 	    item.paidToTenants = (Utils.sumarized(deltaP) * paux);
+	    item.penalty = Utils.sumarized(penalty);
+	    
+	    
+
+	    //item.DTxPenaltyXTolerance
+	    
 	    
 	    // at 70%
 		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
@@ -220,13 +229,17 @@ public class DatacenterControllerDiscrete {
 	    
 		double dcCost  = (Utils.sumarized(deltaP) * paux) + item.onsiteGenerationCost - item.coolingCost;
 	    item.dcCost = dcCost;
-		double socialCost = (Utils.sumarized(c)) + item.onsiteGenerationCost;
+		double socialCost = (Utils.sumarized(c)) ; //+ item.onsiteGenerationCost
 	    item.socialCost = socialCost;
 
+//	    System.out.println("nonCompleteTasks=" +  item.nonCompleteTasks);
+//		System.out.println("penalty=" +  item.penalty);
+//		System.out.println("socialCost=" +  item.socialCost);
+	    
 	    pareto[iteration]= item;		
 	    bw.write(iteration + " " + paux + " " + item.alpha + " " + item.onsiteGeneration +" " + "0" + " " 
 	    + dcCost + " " + socialCost + " " + item.nonCompleteTasks  +" " + item.violatedTime
-	    +" " + item.paidToTenants+" " + item.onsiteGenerationCost+" " + item.coolingCost +" " +item.coolingPowerConsumption
+	    +" " + item.paidToTenants+" " + item.onsiteGenerationCost+" " + item.coolingCost +" " +item.coolingPowerConsumption +" " +item.penalty
 	    		);
 
 	    bw.newLine();
@@ -344,6 +357,7 @@ public class DatacenterControllerDiscrete {
 		result.alpha = Utils.sumarized(Arrays.stream(btoByClients).map(e-> {return e.alpha;}).toArray(Double[]::new));
 		result.nonCompleteTasks = Utils.sumarized(Arrays.stream(btoByClients).map(e-> {return e.nonCompleteTasks;}).toArray(Double[]::new));
 		result.violatedTime = Utils.sumarized(Arrays.stream(btoByClients).map(e-> {return e.violatedTime;}).toArray(Double[]::new));
+
 		//result.socialCost = Utils.sumarized(Arrays.stream(btoByClients).map(e-> {return e.socialCost;}).toArray(Double[]::new));
 
 
@@ -493,7 +507,7 @@ public class DatacenterControllerDiscrete {
 	public static double getDeltaH(double[] deltaP) {
 		// at 70%
 		double cruising_power_watts = ro_servers_number* Utils.power(Constants.server_prcs_number/3, Constants.server_prcs_number/3, Constants.server_prcs_number);
-		System.out.println(cruising_power_watts);
+		//System.out.println(cruising_power_watts);
 
 		double coolingPowerConsumption = HVAC.coolingPowerConsumption(cruising_power_watts,
 		    		cruising_power_watts
@@ -550,6 +564,10 @@ public class DatacenterControllerDiscrete {
 		
 		double[] b = new double[ro_clients_number];
 		double[] c = new double[ro_clients_number];
+		double[] penalty = new double[ro_clients_number];
+		double[] DT = new double[ro_clients_number];
+
+
 		//double y=0;
 		double[] deltaP = new double[ro_clients_number];
 		
@@ -583,6 +601,10 @@ public class DatacenterControllerDiscrete {
 					deltaP[j] = obj.alpha;
 				    b[j]= (ρ - (deltaH) - deltaP[j])*RI;
 					c[j] = obj.loss;
+					penalty[j] = obj.penalty;
+					DT[j] = obj.nonCompleteTasks;
+
+					
 				}
 				
 				deltaH = getDeltaH(deltaP);
@@ -619,8 +641,10 @@ public class DatacenterControllerDiscrete {
 			
 			//double H = getH(deltaP);
 			//double H = 0 ;
-			double socialCost = (Utils.sumarized(c)) + realGP * α ;
+			double socialCost = (Utils.sumarized(c)) ; // + realGP * α 
    	        result.socialCost = socialCost;
+   	        result.penalty = Utils.sumarized(penalty);
+   	        result.nonCompleteTasks = Utils.sumarized(DT);
 
 
 			//System.out.println(socialCost);
@@ -654,12 +678,13 @@ public class DatacenterControllerDiscrete {
 			}
    	        
    	        GP = Math.sqrt(    Utils.sumarized(b)   *   cardC  *  (resta )  /  α  ) - (cardC-1)*( resta);
-//			if (GP <0) {
-//				GP=0;
-//			}
+			if (GP <0) {
+				GP=0;
+			}
 
 			δ = Math.abs( ( ρ -  deltaH - GP -   Utils.sumarized(deltaP)) / (ρ -  deltaH)) ;
-			deltaH = 0;
+   	        deltaH = 0;
+
 			//System.out.println(RI+ " " + dcCost + " " + realGP + " " + coolCost  + " " + Utils.sumarized(deltaP) * RI);
 			
 			
@@ -702,7 +727,8 @@ public class DatacenterControllerDiscrete {
 						bw.write(0 + " " + result.payment + " " + result.alpha + " " 
 								+ result.onsiteGeneration+" " + 0 + " " + result.dcCost + " " + result.socialCost
 								+ " " + result.nonCompleteTasks+ " " + result.violatedTime
-								+" " + result.paidToTenants+" " + result.onsiteGenerationCost+" " + result.coolingCost +" " +result.coolingPowerConsumption
+								+" " + result.paidToTenants+" " + result.onsiteGenerationCost+" " + result.coolingCost 
+								+" " +result.coolingPowerConsumption +" " +result.penalty
 										)
 								
 								;
@@ -775,9 +801,12 @@ public class DatacenterControllerDiscrete {
 		result.alpha = function.reductionVector[index];
 		result.loss = function.lossVector[index];
 		result.violatedTime = function.violatedTime[index];
+		result.penalty = function.penalty[index];
 		result.nonCompleteTasks = function.nonCompleteTasks[index];
 		result.payment = price;
-
+		
+		
+		
 		return result;
 	
 	}

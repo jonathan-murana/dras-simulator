@@ -69,6 +69,7 @@ public class HeuDFVSRunner {
 		    objectivesVector.nonCompleteTasks = new Double[steps_reduction + 1];
 		    objectivesVector.violatedTime = new Double[steps_reduction + 1];
 		    objectivesVector.price = new Double[steps_reduction + 1];
+		    objectivesVector.penalty = new Double[steps_reduction + 1];
 
 			
 	    	//steps_reduction=  100  ;
@@ -80,6 +81,8 @@ public class HeuDFVSRunner {
 			objectivesResult.payment = 0.0;
 			objectivesResult.reductionPercentage = 0.0;
 			objectivesResult.nonCompleteTasks = 0.0;
+			objectivesResult.penalty = 0.0;
+
 
 			// obtaining reference
 	    	List<Integer> variables = Utils.random(R*K, Integer.MAX_VALUE , Integer.MAX_VALUE ,654654);
@@ -271,14 +274,18 @@ public class HeuDFVSRunner {
 			//		break;
 			//	}
 				
-				
+				 // TODO: asumo que la tolerancia del cliente es la de la primea tarea, pasar esto como atributo del cliente
+				 objectivesVector.clientTolerance = problem.getTolerance()[0];
 				 objectivesVector.reductionVector[i] = objectives.alpha;
 				 objectivesVector.lossVector[i] = objectives.loss;
 				 objectivesVector.nonCompleteTasks[i] = objectives.nonCompleteTasks;
-				 objectivesVector.violatedTime[i] = objectives.violatedTime;
+				 objectivesVector.penalty[i] = objectives.loss /objectivesVector.clientTolerance;				 
 				 objectivesVector.violatedTime[i] = objectives.violatedTime;
 				 objectivesVector.price[i] = objectives.payment;
 
+				 
+				 //System.out.println("nonCompleteTasks=" +  objectives.nonCompleteTasks);
+				 //System.out.println("penalty=" +  objectives.loss /objectivesVector.clientTolerance);
 				 
 				if (objectives.profit > objectivesResult.profit ) {
 					objectivesResult.alpha = objectives.alpha;
@@ -287,23 +294,32 @@ public class HeuDFVSRunner {
 					objectivesResult.payment =  objectives.payment;
 					objectivesResult.reductionPercentage = coresPerStep*1.0;
 					objectivesResult.nonCompleteTasks = objectives.nonCompleteTasks;
+					objectivesResult.penalty = objectives.loss/objectivesVector.clientTolerance;
+					
+				
+					//System.out.println("nonCompleteTasks=" +  objectivesResult.nonCompleteTasks);
+					//System.out.println("penalty=" +  objectivesResult.penalty);
+
+					
+					
 				}
 
 	    	}
 
 			
-	    	if (Utils.testLevel() >= 1) {
-		      	System.out.println("alpha=" +  objectivesResult.alpha);
-		    	System.out.println("profit=" +  objectivesResult.profit);
-				System.out.println("loss=" +  objectivesResult.loss);
-				System.out.println("payment=" +  objectivesResult.payment);
-				System.out.println("reductionPercentage=" +  objectivesResult.reductionPercentage);
-				System.out.println("nonCompleteTasks=" +  objectivesResult.nonCompleteTasks);
-	    	}
+	    	//if (Utils.testLevel() >= 1) {
+	    	//System.out.println("alpha=" +  objectivesResult.alpha);
+	    	//System.out.println("profit=" +  objectivesResult.profit);
+	    	//System.out.println("loss=" +  objectivesResult.loss);
+	    	//System.out.println("payment=" +  objectivesResult.payment);
+	    	//	System.out.println("reductionPercentage=" +  objectivesResult.reductionPercentage);
+	    	//	System.out.println("nonCompleteTasks=" +  objectivesResult.nonCompleteTasks);
+				//System.out.println("penalty=" +  objectivesResult.penalty);
 
-	    // TODO: asumo que la tolerancia del cliente es la de la primea tarea, pasar esto como atributo del cliente
-	    objectivesVector.clientTolerance = problem.getTolerance()[0];
-	    
+	    	//}
+
+			//System.out.println(objectivesVector.clientTolerance);
+	    	
 		return objectivesVector;
 			
 	 }

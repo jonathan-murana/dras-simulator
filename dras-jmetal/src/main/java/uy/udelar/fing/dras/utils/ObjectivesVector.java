@@ -7,7 +7,7 @@ public class ObjectivesVector {
 	public Double [] nonCompleteTasks;
 	public Double clientTolerance; 
     public Double []violatedTime = null;
+    public Double []penalty = null;
 	public Double [] price;
-
 	
 }
